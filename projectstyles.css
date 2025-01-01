@@ -1,0 +1,129 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    overflow: hidden;
+    height: 100%;
+    width: 100%;
+    font-family: Helvetica, sans-serif; /* Added fallback font */
+    font-weight: bold;
+    letter-spacing: -0.08vw;
+}
+
+.menu {
+    float: left;
+    width: 25%;
+    height: 100vh;
+    background-color: #f4f4f4;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.content {
+    float: right;
+    width: 75%;
+    height: 100vh;
+    background-color: #fff;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.navButton {
+    justify-content: left;
+    text-align: left; /* Ensuring alignment if needed */
+}
+
+.navButton a {
+    font-size: 2.5vw;
+    color: #111;
+    text-decoration: none; /* Remove underline from links */
+    transition: color 0.3s;
+}
+
+.navButton a:hover {
+    color: #666;
+}
+
+.title {
+    font-size: 5vw;
+    color: #000;
+    text-align: left;
+    margin-bottom: 10px; /* Ensure no default margins are affecting the layout */
+    padding: 0; /* Ensure no default padding is affecting the layout */
+}
+
+.project {
+    cursor: pointer;
+    font-size: 3vw;
+    margin-bottom: 5px;
+    background-color: #f4f4f4;
+    color: black;
+    border: none; /* Make sure no borders are interfering */
+    box-sizing: border-box; /* Ensure padding does not affect the width */
+}
+
+.project:hover {
+    background-color: #e0e0e0; /* Lighter gray on hover */
+    color: #666; /* Change text color on hover */
+}
+
+.project.active {
+    background-color: black;
+    color: white;
+}
+
+
+.contenttitle {
+    font-size: 6vw;
+    text-align: center;
+}
+.contentsub {
+    font-size: 2.5vw;
+    text-align: center;
+}
+.contentsub a {
+    color: #000000;
+    transition: color 0.3s;
+}
+.contentsub a:hover {
+    color: #666666;
+}
+.content {
+    font-size: 1.3vw;
+}
+.content a {
+    color: #000000;
+    transition: color 0.3s;
+}
+.content a:hover {
+    color: #666666;
+}
+.content-image-right {
+    float: right;
+    width: 12vw;
+    padding: 10px;
+    margin: 10px;
+    text-align: center;
+}
+.content-image-right img {
+    width: 12vw;
+    height: auto;
+}
+.content-image-right figcaption {
+    font-size: 1vw;
+}
+.content-image-left {
+    float: left;
+    width: 12vw;
+    padding: 10px;
+    margin: 10px;
+    text-align: center;
+}
+.content-image-left img {
+    width: 12vw;
+    height: auto;
+}
+.content-image-left figcaption {
+    font-size: 1vw;
+}

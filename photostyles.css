@@ -1,0 +1,67 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    height: 100%;
+    width: 100%;
+    font-family: Helvetica;
+    font-weight: Bold;
+    letter-spacing: -.08vw;
+}
+
+/* Nav bar stuff */
+
+.topBar {
+    width: 100%;
+}
+.navButton {
+    justify-content: left;
+}
+.navButton a {
+    font-size: 2.5vw;
+    color: #111111;
+}
+.navButton a:hover {
+    color: #666666;
+}
+.title {
+    font-size: 2.5vw;
+    color: #000000;
+    text-align: center;
+}
+
+
+/* Photo gallery blocks */
+
+.photo-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    margin-top: 30px;
+    margin-bottom: 40px;
+}
+img {
+    width: 70vw;
+    height: auto;
+}
+.info-card {
+    background-color: #ffffff;
+    padding: 10px;
+    margin: 20px;
+    text-align: center;
+    border-width: .1vw;
+    border-color: #000000;
+    border-style: solid;
+
+    box-shadow: .5vw .5vw 1px rgba(0, 0, 0, 1);
+}
+.info-card h3 {
+    font-size: 1.4vw;
+    font-style: italic;
+}
+.info-card p {
+    font-size: 0.9vw;
+}
+
