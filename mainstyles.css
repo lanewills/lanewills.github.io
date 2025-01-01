@@ -1,0 +1,87 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    overflow: hidden;
+    height: 100%;
+    width: 100%;
+    font-family: Helvetica;
+}
+
+.title {
+    font-weight: Bold;
+    font-size: 20vw;
+    letter-spacing: -.13em;
+    white-space: nowrap;
+}
+
+.subtitle {
+    font-weight: Bold;
+    font-size: 62px;
+    letter-spacing: -.08em;
+}
+
+.link {
+    font-weight: Bold;
+    font-size: 53px;
+    letter-spacing: -.08em;
+}
+
+.link a {
+    color: #111111;
+    transition: color 0.3s;
+}
+
+.link a:hover {
+    color: #666666
+}
+
+#myRectangle {
+    position: absolute;
+    top: 1vw;
+    left: 67vw;
+    width: 20vw;
+    height: 10vw;
+    background-color: transparent;
+    color: black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 2vw;
+    font-weight: Bold;
+    letter-spacing: -.08em;
+    transform: rotate(25deg);
+}
+
+
+#verticalBar {
+    position: fixed;
+    top: 0;
+    width: 7px;
+    height: 100%;
+    background-color: #FFFFFF;
+    pointer-events: none;
+    z-index: -1;
+}
+
+#horizontalBar {
+    position: fixed;
+    left: 0;
+    height: 7px;
+    width: 100%;
+    background-color: #FFFFFF;
+    pointer-events: none;
+    z-index: -1;
+}
+
+#coordinates {
+    position: absolute;
+    font-weight: Bold;
+    font-size: 1.3vw;
+    letter-spacing: -.08em;
+    white-space: nowrap;
+    color: #FFFFFF;
+}
+
