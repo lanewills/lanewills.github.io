@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<div class="contenttitle">Poem Clock</div>
+<div class="contentsub">At noon the sun stands high and bright, / At twelve o'clock, the world feels just right.</div>
+<br>
+<div class="content">
+    <figure class="content-image-right">
+        <img src="https://s3.us-east-1.amazonaws.com/6co.info/assets/projects/poem/1.jpg" alt="api">
+        <figcaption>API Testing</figcaption>
+    </figure>
+    I recently saw a project on Kickstarter that told the time in a unique way. A device that uses ChatGPT to generate a poem about the current time,
+    and displays it on an e-paper display. I thought it looked cool, but I didn't feel like shelling out over $100 for it. However, the project
+    seemed simple enough to where I could replicate it with a Raspberry Pi and an e-paper display. So, that's exactly what I did.
+    <br>
+    <br>
+    I figured this would be a great way to get comfortable working with APIs, and it was! I started experimenting by printing the output from
+    the OpenAI API directly to the console, and slowly built up a good system prompt that gave me the poems I was looking for. Once I was happy
+    with the output, I added a few other simple features like checking for an internet connection and holiday poems while I waited for the
+    hardware to arrive.
+    <br>
+    <br>
+    <figure class="content-image-left">
+        <img src="https://s3.us-east-1.amazonaws.com/6co.info/assets/projects/poem/2.JPEG" alt="epaper">
+        <figcaption>Absolute nonsense</figcaption>
+    </figure>
+    Once the hardware arrived, I got to work testing out the display with the provided example code and getting my own
+    text to display. It took a lot longer than I was expecting to get my own text up due to the documentation not being the best,
+    but I eventually got it working by copying the provided library into the project repository. Next up is getting the generated
+    poems to display!
+    <br>
+    <br>
+    <figure class="content-image-right">
+        <img src="https://s3.us-east-1.amazonaws.com/6co.info/assets/projects/poem/3.JPEG" alt="api">
+        <figcaption>The final result</figcaption>
+    </figure>
+    After getting the display and text wrap working, everything fell together quite nicely. I was getting poems to generate and display
+    at the right times! I set it to only generate every 5th minute so I wouldn't use up all of my API credits before the year's end, but I would be close to doing so
+    (since credits expire after a year, unfortunately, its best to use as much as you can). After setting up the cron job, it
+    was basically plug and play. Having the e-paper display as a Pi HAT worked in my favor as well, as the RPi Zero acts as a little stand.
+    If you're interested in how it works or want to build one for yourself, check out my
+    <a href="https://github.com/lanewills/poem_clock">GitHub repo</a>.
+
+</div>
+</html>
