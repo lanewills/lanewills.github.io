@@ -12,6 +12,13 @@ function showContent(projectName, elem) {
     if (contentDiv) {
         contentDiv.innerHTML = ''; // clear the content
         switch (projectName) {
+            case 'poem':
+                fetch('project_pages/poem.html')
+                    .then(response => response.text())
+                    .then(data => {
+                        contentDiv.innerHTML = data;
+                    });
+                break;
             case 'cathode':
                 fetch('project_pages/caster.html')
                     .then(response => response.text())
