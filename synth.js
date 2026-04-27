@@ -1,3 +1,4 @@
+// synth
 document.addEventListener("touchstart", function() {
     let width = window.innerWidth;
     let height = window.innerHeight;
