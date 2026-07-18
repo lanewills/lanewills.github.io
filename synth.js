@@ -227,12 +227,15 @@
 
     touchActive = true;
 
+    // round client X and Y because the values were too granular.
+    // i also don't know if this works on safari iOS, it seems that the user must
+    // interact with the page before audio plays.
     if (!isSynthInit) {
-      init(touch.clientX, touch.clientY);
+      init(Math.round(touch.clientX), Math.round(touch.clientY));
     } else {
       if (audioContext.state === "suspended") audioContext.resume();
       turnOn();
-      updateSynth(touch.clientX, touch.clientY); // sound starts on tap, no drag needed
+      updateSynth(Math.round(touch.clientX), Math.round(touch.clientY)); // sound starts on tap, no drag needed
     }
   }
 
@@ -241,7 +244,7 @@
     const touch = e.touches[0];
     if (!touch) return;
     e.preventDefault();
-    updateSynth(touch.clientX, touch.clientY);
+    updateSynth(Math.round(touch.clientX), Math.round(touch.clientY));
   }
 
   function onTouchEnd() {
