@@ -1,6 +1,5 @@
 // synth
-// synth 2.0 has (functional) mobile touch support, a bandpass filter with the scroll wheel,
-// and link negation.
+// synth 2.1: scroll wheel drives a dry/wet high-pass / low-pass "DJ filter".
 
 (function () {
   "use strict";
@@ -15,27 +14,33 @@
   };
   const WAVE_TYPES = ["sawtooth", "square", "triangle", "sine"];
 
-  // band-pass filter range for the scroll wheel. the sweep moves
-  // logarithmically through this range.
+  // filter range. cutoffs sweep logarithmically through this range.
+  // (kept at or below Nyquist; biquad cutoffs above it get clamped anyway.)
   const FILTER_MIN_FREQ = 60;
-  const FILTER_MAX_FREQ = 30000;
-  const FILTER_START_FREQ = 100;
-  const FILTER_Q = 0.4;
+  const FILTER_MAX_FREQ = 20000;
+  const FILTER_Q = 0.707; // Butterworth-flat; raise for a resonant sweep
 
-  // each scroll tick adds "velocity" to a sweep that's animated every frame and slowed by friction.
-  const FILTER_VELOCITY_PER_TICK = 5; // log-Hz/sec added per wheel event
-  const FILTER_MAX_VELOCITY = 50; // log-Hz/sec cap
+  // the filter is controlled by one position in [-1, 1]:
+  //   0   = neutral (fully dry)
+  //   > 0 = high-pass sweeping up from FILTER_MIN_FREQ
+  //   < 0 = low-pass sweeping down from FILTER_MAX_FREQ
+  // the wet mix fades in over the first FILTER_MIX_RAMP of travel from center.
+  const FILTER_MIX_RAMP = 0.25;
+  const FILTER_SMOOTHING = 0.02; // seconds, time constant for parameter changes
+
+  // each scroll tick adds "velocity" to the sweep, animated every frame and slowed by friction.
+  const FILTER_VELOCITY_PER_TICK = 0.8; // position units/sec added per wheel event
+  const FILTER_MAX_VELOCITY = 8; // position units/sec cap
   const FILTER_FRICTION = 0.90; // velocity retained per ~frame
   const FILTER_VELOCITY_EPSILON = 0.001; // below this, treat velocity as settled
 
-  // crosshair thickness range driven by the filter's position.
-  const BAR_MIN_THICKNESS = 1; // px, at FILTER_MIN_FREQ
-  const BAR_MAX_THICKNESS = 50; // px, at FILTER_MAX_FREQ
+  // crosshair thickness is driven by how much filtering is happening.
+  const BAR_MIN_THICKNESS = 1; // px, at neutral
+  const BAR_MAX_THICKNESS = 50; // px, at either extreme
   const LABEL_OFFSET = 15; // px gap kept between the crosshair's edge and the coordinate label
 
-  // true on touch/coarse-pointer devices (phones, tablets). the wheel
-  // listener is never attached on these, so scrolling a mouse
-  // wheel is a desktop/trackpad-only feature.
+  // true on touch/coarse-pointer devices. the wheel listener is never
+  // attached on these, so the filter is a desktop/trackpad-only feature.
   const isTouchPrimary =
     window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
 
@@ -45,17 +50,19 @@
   let isSynthInit = false;
   let isOn = false;
   let touchActive = false;
-  let filterEngaged = false; // stays false (filter bypassed) until the first scroll
+  let filterEngaged = false; // stays false until the first scroll (keeps CSS bar size until then)
 
   let lastX = 0;
   let lastY = 0;
   let currentThickness = 0;
 
-  let filterVelocity = 0; // current sweep speed, in log-Hz/sec
+  let filterPos = 0; // -1 (full low-pass) .. 0 (dry) .. +1 (full high-pass)
+  let filterVelocity = 0; // current sweep speed, in position units/sec
   let filterAnimHandle = null; // requestAnimationFrame id, or null when idle
   let filterAnimLastTime = 0;
 
-  let audioContext, oscillators, gainNodes, filterNode;
+  let audioContext, oscillators, gainNodes;
+  let masterBus, dryGain, wetGain, highpassNode, lowpassNode;
   let coordinates, verticalBar, horizontalBar;
 
   // anything tapped/clicked inside a link is left alone so navigation
@@ -66,25 +73,44 @@
 
   function buildEngine() {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    
+
     if (audioContext.state === "suspended") {
       audioContext.resume();
     }
 
-    filterNode = audioContext.createBiquadFilter();
-    filterNode.type = "bandpass";
-    filterNode.frequency.value = FILTER_START_FREQ;
-    filterNode.Q.value = FILTER_Q;
-    filterNode.connect(audioContext.destination);
+    // routing:
+    //   gainNodes -> masterBus -> dryGain ------------------------> destination
+    //                          -> highpass -> lowpass -> wetGain -> destination
+    masterBus = audioContext.createGain();
 
-    // gain nodes go straight to the speakers by default. the filter sits
-    // ready but disconnected until engageFilter() patches it in on the
-    // first scroll.
+    dryGain = audioContext.createGain();
+    dryGain.gain.value = 1;
+    dryGain.connect(audioContext.destination);
+
+    wetGain = audioContext.createGain();
+    wetGain.gain.value = 0;
+    wetGain.connect(audioContext.destination);
+
+    highpassNode = audioContext.createBiquadFilter();
+    highpassNode.type = "highpass";
+    highpassNode.frequency.value = FILTER_MIN_FREQ;
+    highpassNode.Q.value = FILTER_Q;
+
+    lowpassNode = audioContext.createBiquadFilter();
+    lowpassNode.type = "lowpass";
+    lowpassNode.frequency.value = FILTER_MAX_FREQ;
+    lowpassNode.Q.value = FILTER_Q;
+
+    masterBus.connect(dryGain);
+    masterBus.connect(highpassNode);
+    highpassNode.connect(lowpassNode);
+    lowpassNode.connect(wetGain);
+
     gainNodes = [];
     for (let i = 0; i < 4; i++) {
       const gain = audioContext.createGain();
       gain.gain.value = 0;
-      gain.connect(audioContext.destination);
+      gain.connect(masterBus);
       gainNodes.push(gain);
     }
 
@@ -253,22 +279,40 @@
     turnOff();
   }
 
-  // ---- scroll wheel (band-pass filter sweep) ----
-  function engageFilter() {
-    for (let i = 0; i < gainNodes.length; i++) {
-      gainNodes[i].disconnect(audioContext.destination);
-      gainNodes[i].connect(filterNode);
+  // ---- scroll wheel (dry/wet high-pass / low-pass sweep) ----
+
+  // translate filterPos into cutoff frequencies and a dry/wet mix.
+  function applyFilter() {
+    const logMin = Math.log(FILTER_MIN_FREQ);
+    const logMax = Math.log(FILTER_MAX_FREQ);
+    const amount = Math.abs(filterPos); // 0..1, distance from neutral
+
+    // the filter on the "inactive" side stays wide open so it's transparent.
+    let hpFreq = FILTER_MIN_FREQ;
+    let lpFreq = FILTER_MAX_FREQ;
+
+    if (filterPos > 0) {
+      hpFreq = Math.exp(logMin + amount * (logMax - logMin)); // sweeps up
+    } else if (filterPos < 0) {
+      lpFreq = Math.exp(logMax - amount * (logMax - logMin)); // sweeps down
     }
-    filterEngaged = true;
-    updateBarThickness();
+
+    // linear crossfade. (dry and wet are the same signal, so they're
+    // correlated; linear keeps the level steadier than equal-power would.)
+    const mix = Math.min(1, amount / FILTER_MIX_RAMP);
+
+    const now = audioContext.currentTime;
+    highpassNode.frequency.setTargetAtTime(hpFreq, now, FILTER_SMOOTHING);
+    lowpassNode.frequency.setTargetAtTime(lpFreq, now, FILTER_SMOOTHING);
+    dryGain.gain.setTargetAtTime(1 - mix, now, FILTER_SMOOTHING);
+    wetGain.gain.setTargetAtTime(mix, now, FILTER_SMOOTHING);
   }
 
   function updateBarThickness() {
     if (!filterEngaged) return;
 
-    const logMin = Math.log(FILTER_MIN_FREQ);
-    const logMax = Math.log(FILTER_MAX_FREQ);
-    const t = (Math.log(filterNode.frequency.value) - logMin) / (logMax - logMin);
+    // -1 (full low-pass) -> min, 0 (dry) -> 50%, +1 (full high-pass) -> max
+    const t = (filterPos + 1) / 2;
     currentThickness = BAR_MIN_THICKNESS + t * (BAR_MAX_THICKNESS - BAR_MIN_THICKNESS);
 
     verticalBar.style.width = currentThickness + "px";
@@ -281,19 +325,17 @@
     const dt = filterAnimLastTime ? (now - filterAnimLastTime) / 1000 : 0;
     filterAnimLastTime = now;
 
-    const logMin = Math.log(FILTER_MIN_FREQ);
-    const logMax = Math.log(FILTER_MAX_FREQ);
-
-    let nextLog = Math.log(filterNode.frequency.value) + filterVelocity * dt;
-    if (nextLog < logMin) {
-      nextLog = logMin;
-      filterVelocity = 0; // hit the bottom of the range, stop pushing against it
-    } else if (nextLog > logMax) {
-      nextLog = logMax;
-      filterVelocity = 0; // same at the top
+    let nextPos = filterPos + filterVelocity * dt;
+    if (nextPos < -1) {
+      nextPos = -1;
+      filterVelocity = 0; // hit full low-pass, stop pushing against it
+    } else if (nextPos > 1) {
+      nextPos = 1;
+      filterVelocity = 0; // same at full high-pass
     }
 
-    filterNode.frequency.value = Math.exp(nextLog);
+    filterPos = nextPos;
+    applyFilter();
     updateBarThickness();
 
     // friction: frame-rate-independent exponential decay toward zero.
@@ -327,12 +369,13 @@
 
     e.preventDefault();
 
-    if (!filterEngaged) engageFilter();
+    filterEngaged = true;
 
-    // scroll up speeds the sweep up; scroll down speeds it
-    // down. only the sign of deltaY is used (not its magnitude), which
-    // keeps the feel consistent across mice and trackpads, but repeated
-    // ticks in the same direction still stack up into acceleration.
+    // scroll up pushes toward high-pass; scroll down pushes toward low-pass.
+    // only the sign of deltaY is used (not its magnitude), which keeps the
+    // feel consistent across mice and trackpads, but repeated ticks in the
+    // same direction still stack up into acceleration. scrolling the
+    // opposite way brings you back through neutral.
     const direction = e.deltaY < 0 ? 1 : -1;
     nudgeFilterVelocity(direction);
   }
